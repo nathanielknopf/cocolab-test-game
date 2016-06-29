@@ -1,0 +1,193 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+	<meta charset="UTF-8" />
+    <title>Green Square</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="//cdn.jsdelivr.net/phaser/2.2.2/phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0
+        }
+    </style>
+    <h1>Welcome to game.</h1>
+</head>
+<body>
+
+<!-- <script src="/socket.io/socket.io.js"></script> -->
+
+<script type="text/javascript">
+
+var socket = io()
+
+socket.on('redirect', function(destination){
+    window.location = destination
+})
+
+var game = new Phaser.Game(720, 540, Phaser.AUTO, '', { preload: preload, create: create, update: update })
+
+function preload() {
+    game.load.image('background', 'assets/grid.jpg')
+    game.load.image('blob', 'assets/blob.png')
+    game.load.image('tree', 'assets/tree.png')
+    game.load.image('apple', 'assets/apple.png')
+    game.load.image('rock', 'assets/rock.png')
+}
+
+var player
+var platforms
+var cursors
+var trees
+var apples
+var rocks
+
+var spacebar
+var spacebar_pressed = false
+
+var apple_count = 0
+var rock_count = 0
+
+var tree_locations = {
+    0 : [350, 200],
+    1 : [190, 40],
+    2 : [80, 120],
+    3 : [220, 300]
+}
+
+var rock_locations = {
+    0 : {x:100, y:400},
+    1 : {x:200, y:450},
+    2 : {x:300, y:350},
+}
+
+function create() {
+
+    game.physics.startSystem(Phaser.Physics.ARCADE)
+
+    var background = game.add.sprite(0, 0, 'background')
+    background.scale.setTo(1.5, 1.5)
+
+    trees = game.add.group()
+    trees.enableBody = true
+
+    for (var i = 0; i < 4; i++) {
+        var x = tree_locations[i][0]
+        var y = tree_locations[i][1]
+        var tree = trees.create(x, y, 'tree')
+        tree.scale.setTo(1.5, 1.5)
+        tree.body.immovable = true
+    }
+
+    rocks = game.add.group()
+    rocks.enableBody = true
+
+    for (var i = 0; i < 3; i++){
+        var x = rock_locations[i].x
+        var y = rock_locations[i].y
+        var rock = rocks.create(x, y, 'rock')
+    }
+
+    apples = game.add.group()
+    apples.enableBody = true
+
+    player = game.add.sprite(40, game.world.height - 40, 'blob')
+
+    game.physics.arcade.enable(player)
+    player.body.collideWorldBounds = true
+
+    cursors = game.input.keyboard.createCursorKeys()
+
+    spacebar = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR)
+}
+
+function update() {
+
+    //  Collide the player and the stars with the platforms
+    game.physics.arcade.collide(player, trees)
+
+    game.physics.arcade.overlap(player, rocks, collectRock, null, this)
+    game.physics.arcade.overlap(player, apples, collectApple, null, this)
+    game.physics.arcade.overlap(rocks, trees, knockTree, null, this)
+
+    // spacebar
+    if (spacebar.isDown){
+        if(!spacebar_pressed){
+            spacebar_pressed = true
+            shootRock()
+        }
+    } else if (spacebar.isUp){
+        spacebar_pressed = false
+    }
+
+    //  Reset the players velocity (movement)
+    player.body.velocity.x = 0
+    player.body.velocity.y = 0
+
+    if(cursors.left.isDown || cursors.right.isDown){
+    	if (cursors.left.isDown && cursors.right.isDown){
+    		player.body.velocity.x = 0
+    	} else if (cursors.left.isDown){
+    		player.body.velocity.x = -150
+    	} else if (cursors.right.isDown){
+    		player.body.velocity.x = 150
+    	}
+    } else {
+    	player.body.velocity.x = 0
+    }
+
+    if(cursors.up.isDown || cursors.down.isDown){
+    	if (cursors.up.isDown && cursors.down.isDown){
+    		player.body.velocity.y = 0
+    	} else if (cursors.up.isDown){
+    		player.body.velocity.y = -150
+    	} else if (cursors.down.isDown){
+    		player.body.velocity.y = 150
+    	}
+    } else {
+    	player.body.velocity.y = 0
+    }
+}
+
+function collectRock(player, rock){
+    rock.kill()
+    rock_count += 1
+    console.log("Rock collected.")
+    socket.emit('rocks', rock_count)
+}
+
+function collectApple(player, apple){
+    apple.kill()
+    apple_count += 1
+    console.log("Apple collected.")
+    socket.emit('apples', apple_count)
+}
+
+function knockTree(rock, tree){
+    rock.kill()
+    spawnApple(tree) // do this soon
+}
+
+function spawnApple(tree){
+    var x = tree.x
+    var y = tree.y + 60
+    setTimeout(function(){
+        var apple = apples.create(x, y, 'apple')
+        apple.scale.setTo(.125, .125)
+    }, 50)
+}
+
+function shootRock(){
+    if(rock_count >= 1){
+        rock_count -= 1
+        socket.emit('rocks', rock_count)
+        var rock = rocks.create(player.x+50, player.y, 'rock')
+        rock.body.velocity.x = 400
+    }else{
+        console.log("You don't have any rocks!")
+    }
+}
+
+</script>
+
+</body>
+</html>
