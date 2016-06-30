@@ -8,12 +8,16 @@ var database = require(__dirname + '/database')
 
 var mysql = require('mysql')
 
-var connection = mysql.createConnection({
-	host		: 'localhost',
-	user		: 'root',
-	password	: 'cocolab',
-	database	: 'test'
-})
+var use_db = true
+
+if(use_db){
+	var connection = mysql.createConnection({
+		host		: 'localhost',
+		user		: 'root',
+		password	: 'cocolab',
+		database	: 'test'
+	})
+}
 
 app.use(express.static(__dirname));
 
@@ -61,11 +65,15 @@ io.on('connection', function(socket){
 	timer(15)
 
 	socket.on('apples', function(apples){
-		database.updatePlayer(socket_id, 'apples', apples)
+		if(use_db){
+			database.updatePlayer(socket_id, 'apples', apples)
+		}
 	})
 
 	socket.on('rocks', function(rocks){
-		database.updatePlayer(socket_id, 'rocks', rocks)
+		if(use_db){
+			database.updatePlayer(socket_id, 'rocks', rocks)
+		}
 	})
 })
 
