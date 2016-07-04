@@ -8,7 +8,9 @@ var database = require(__dirname + '/database')
 
 var mysql = require('mysql')
 
-var use_db = true
+var use_db = false
+
+var time_to_play = 300
 
 if(use_db){
 	var connection = mysql.createConnection({
@@ -48,7 +50,9 @@ io.on('connection', function(socket){
 
 	console.log("Connection from user: " + user + ".")
 
-	database.addPlayer(user, socket_id)
+	if(use_db){
+		database.addPlayer(user, socket_id)
+	}
 
 	var timer = function(seconds){
 		setTimeout(function(){
@@ -62,7 +66,7 @@ io.on('connection', function(socket){
 		}, 1000)
 	}
 
-	timer(15)
+	timer(time_to_play)
 
 	socket.on('apples', function(apples){
 		if(use_db){
@@ -71,6 +75,7 @@ io.on('connection', function(socket){
 	})
 
 	socket.on('rocks', function(rocks){
+		//update for new inputs ('small', 'big', 'empty')
 		if(use_db){
 			database.updatePlayer(socket_id, 'rocks', rocks)
 		}
